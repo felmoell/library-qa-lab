@@ -21,7 +21,8 @@ and is built to grow: members, loans, auth, a web frontend (see [Roadmap](#roadm
 | [.github/](.github/) | CI pipeline, reusable "start SUT" action, Allure categories | GitHub Actions, Allure |
 | [docs/](docs/) | [LEARNING-PATH.md](docs/LEARNING-PATH.md) (exercises) and [CHEATSHEET.md](docs/CHEATSHEET.md) (Jest/Jenkins → new tools) | |
 
-All three tools write **Allure results**, so CI merges them into **one** report.
+All three tools write **Allure results**, so CI merges them into **one** report. JaCoCo coverage and the JMeter
+dashboard become part of that report too, through two small custom Allure plugins.
 
 ## Prerequisites
 
@@ -153,14 +154,24 @@ with inputs for the JMeter load).
 | **Build + JUnit** | | `./mvnw verify` (tests + JaCoCo gate ≥ 80% lines, PostgreSQL via Testcontainers) | `app-jar`, `allure-results-junit`, `coverage-report` |
 | **API tests** | build | starts PostgreSQL (service container) and the jar ([start-sut](.github/actions/start-sut/action.yml)), runs Newman | `allure-results-postman` |
 | **Performance smoke** | build | starts PostgreSQL and the jar, runs JMeter, checks SLA gates | `allure-results-perf`, `jmeter-report` |
-| **Allure report** | all | merges all results, adds history + metadata, generates the report (Allure 3), comments on PRs, publishes to `gh-pages` (only from `main`) | `allure-report` |
+| **Allure report** | all | merges all results, adds history + metadata, generates one Allure 3 report (tests + coverage + JMeter), comments on PRs, publishes to `gh-pages` (only from `main`) | `allure-report` |
 
 The report job also runs when tests failed (`if: !cancelled()`), because that's when you need the report most.
 Trend charts appear from the second run on: the previous report's `history.jsonl` is copied in before generating.
-Report name, history and failure categories are set in [allurerc.mjs](.github/allure/allurerc.mjs).
+Report name, history, failure categories and plugins are set in [allurerc.mjs](.github/allure/allurerc.mjs).
 
-On pull requests the job also posts the results as a comment ([allure-action](https://github.com/allure-framework/allure-action))
-and updates it on every push. Pages only ever shows `main`; a PR's full report is the `allure-report` artifact of its run:
+The report has three parts, each in its own folder, and an overview page with one card per part:
+
+| Part | Folder | Made by | Card shows |
+|---|---|---|---|
+| Tests (JUnit, Postman, JMeter SLA gates) | `tests/` | Allure's built-in "awesome" plugin | test results |
+| Line coverage | `coverage/` | [jacoco.mjs](.github/allure/plugins/jacoco.mjs): copies the JaCoCo HTML, reads `jacoco.xml` | covered vs. missed lines, failed below 80 % |
+| Load test | `jmeter/` | [jmeter.mjs](.github/allure/plugins/jmeter.mjs): copies the JMeter dashboard, reads `statistics.json` | successful vs. failed requests, failed if an SLA gate failed |
+
+If an upstream job uploaded no coverage or JMeter report, that card shows "unknown" instead of disappearing.
+
+On pull requests the job also posts the test results as a comment ([allure-action](https://github.com/allure-framework/allure-action))
+and updates it on every push. The comment has no links, since a PR's report isn't published anywhere. Pages only ever shows `main`; a PR's full report is the `allure-report` artifact of its run:
 download, unzip, `npx allure@3 open allure-report`.
 
 ## Publish on GitHub
@@ -176,8 +187,8 @@ download, unzip, `npx allure@3 open allure-report`.
    ```
 3. Watch the run under **Actions**. The first run on `main` creates the `gh-pages` branch.
 4. **Settings → Pages → Build and deployment**: Source "Deploy from a branch", branch `gh-pages`, folder `/ (root)`.
-5. A minute later the report is at `https://<your-user>.github.io/library-qa-lab/`,
-   coverage at `…/coverage/`, the JMeter dashboard at `…/jmeter/`.
+5. A minute later the report's overview is at `https://<your-user>.github.io/library-qa-lab/`,
+   the tests at `…/tests/`, coverage at `…/coverage/`, the JMeter dashboard at `…/jmeter/`.
 
 If the publish step fails with a 403: **Settings → Actions → General → Workflow permissions** must allow the
 `GITHUB_TOKEN` to write (or at least not block the job-level `contents: write`).

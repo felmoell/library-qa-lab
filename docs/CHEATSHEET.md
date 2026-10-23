@@ -102,3 +102,5 @@ Security habits on GitHub Actions (also in [ci.yml](../.github/workflows/ci.yml)
 | CI | merges all three + `history.jsonl`, `executor.json`, `environment.properties`; categories in `allurerc.mjs` | `report` job |
 
 Allure results are just JSON files (`*-result.json`). Any tool that can write such a file can show up in the report.
+Coverage and the JMeter dashboard are not test results. Two custom Allure 3 plugins
+([.github/allure/plugins](../.github/allure/plugins/)) add them to the same report as extra parts with their own card.

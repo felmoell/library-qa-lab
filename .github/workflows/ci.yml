@@ -313,19 +313,21 @@ jobs:
 
       - name: Generate Allure report
         run: |
+          # One report with three parts: site/tests/ (Allure), site/coverage/ and site/jmeter/ (custom plugins
+          # that read extra/), plus an overview page at site/index.html. See .github/allure/allurerc.mjs.
           npx --yes "allure@${ALLURE_VERSION}" generate allure-results --config .github/allure/allurerc.mjs -o site
           cp history.jsonl site/
-          if [ -d extra/coverage ]; then cp -r extra/coverage site/coverage; fi
-          if [ -d extra/jmeter/report ]; then cp -r extra/jmeter/report site/jmeter; fi
 
       - name: Write job summary
         run: |
-          # Allure 3 leaves zero counts out of summary.json, hence "// 0"
-          jq -r --arg url "$PAGES_URL" '.stats |
-            "### Allure report\n\n| Total | Passed | Failed | Broken | Skipped |\n|---|---|---|---|---|\n" +
-            "| \(.total // 0) | \(.passed // 0) | \(.failed // 0) | \(.broken // 0) | \(.skipped // 0) |\n\n" +
-            "Report: \($url) (published from main) · Coverage: \($url)coverage/ · JMeter: \($url)jmeter/"' \
-            site/summary.json >> "$GITHUB_STEP_SUMMARY"
+          # One row per report part (each writes a summary.json). Allure 3 leaves zero counts out, hence "// 0".
+          jq -rs --arg url "$PAGES_URL" '
+            "### Allure report\n\n| Part | Status | Passed / total |\n|---|---|---|\n" +
+            (map(.stats as $s | ($s.passed // 0) as $passed | ($s.total // 0) as $total |
+              "| [\(.name)](\($url)\(.href)) | \(.status) | \($passed) / \($total)" +
+              (if $total > 0 then " (\(100 * $passed / $total | floor) %)" else "" end) + " |") | join("\n")) +
+            "\n\nLinks go to the report published from main: \($url)"' \
+            site/*/summary.json >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload report as artifact
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -333,8 +335,14 @@ jobs:
           name: allure-report
           path: site
 
-      # Posts the results as a comment on the pull request and updates it on every new push. No "View" link
-      # (remote-href): Pages only holds the main report; this PR's report is the allure-report artifact above.
+      # The comment links to each part via its summary.json "href", which is relative ("tests/") and would be a dead
+      # link on GitHub. Pages only holds the main report, so there is no public URL for this PR's report (that is the
+      # allure-report artifact): drop the links and comment numbers only. Runs after the artifact upload.
+      - name: Remove relative report links for the PR comment
+        if: github.event_name == 'pull_request'
+        run: for f in site/*/summary.json; do jq 'del(.href)' "$f" > "$f.tmp" && mv "$f.tmp" "$f"; done
+
+      # Posts the test results as a comment on the pull request and updates it on every new push
       - name: Comment results on pull request
         if: github.event_name == 'pull_request'
         uses: allure-framework/allure-action@a3ab9652beb040d940b562c00e999c7735f22906 # v0.11.2
