@@ -27,7 +27,7 @@ env:
   NODE_VERSION: "24"
   JMETER_VERSION: "5.6.3"
   JMETER_SHA512: 5978a1a35edb5a7d428e270564ff49d2b1b257a65e17a759d259a9283fc17093e522fe46f474a043864aea6910683486340706d745fcdf3db1505fd71e689083
-  ALLURE_VERSION: "2.46.1"
+  ALLURE_VERSION: "3.20.1"
 
 jobs:
   build:
@@ -241,6 +241,8 @@ jobs:
     runs-on: ubuntu-24.04
     permissions:
       contents: write # push to the gh-pages branch
+      pull-requests: write # results comment on pull requests (allure-action)
+      checks: write # allure-action reports quality gates as checks (none configured yet)
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -265,7 +267,7 @@ jobs:
           name: jmeter-report
           path: extra/jmeter
 
-      # Allure builds its trend charts from the history/ folder of the previous report
+      # Allure builds its trend charts from history.jsonl of the previous report (see .github/allure/allurerc.mjs)
       - name: Check out previous report (for history)
         continue-on-error: true # the gh-pages branch does not exist before the first publish
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -282,8 +284,7 @@ jobs:
           SHA: ${{ github.sha }}
         run: |
           mkdir -p allure-results
-          if [ -d previous-report/history ]; then cp -r previous-report/history allure-results/; fi
-          cp .github/allure/categories.json allure-results/
+          if [ -f previous-report/history.jsonl ]; then cp previous-report/history.jsonl .; fi
           PAGES_URL="https://${GITHUB_REPOSITORY_OWNER,,}.github.io/${GITHUB_REPOSITORY#*/}/"
           echo "PAGES_URL=$PAGES_URL" >> "$GITHUB_ENV"
           cat > allure-results/executor.json <<EOF
@@ -305,34 +306,40 @@ jobs:
           Runner=ubuntu-24.04
           EOF
 
-      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
-        with:
-          distribution: temurin
-          java-version: ${{ env.JAVA_VERSION }}
-
+      # Allure 3 is a Node.js tool (Allure 2 needed Java)
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: ${{ env.NODE_VERSION }}
 
       - name: Generate Allure report
         run: |
-          npx --yes "allure-commandline@${ALLURE_VERSION}" generate allure-results -o site --clean
+          npx --yes "allure@${ALLURE_VERSION}" generate allure-results --config .github/allure/allurerc.mjs -o site
+          cp history.jsonl site/
           if [ -d extra/coverage ]; then cp -r extra/coverage site/coverage; fi
           if [ -d extra/jmeter/report ]; then cp -r extra/jmeter/report site/jmeter; fi
 
       - name: Write job summary
         run: |
-          jq -r --arg url "$PAGES_URL" '.statistic |
+          # Allure 3 leaves zero counts out of summary.json, hence "// 0"
+          jq -r --arg url "$PAGES_URL" '.stats |
             "### Allure report\n\n| Total | Passed | Failed | Broken | Skipped |\n|---|---|---|---|---|\n" +
-            "| \(.total) | \(.passed) | \(.failed) | \(.broken) | \(.skipped) |\n\n" +
+            "| \(.total // 0) | \(.passed // 0) | \(.failed // 0) | \(.broken // 0) | \(.skipped // 0) |\n\n" +
             "Report: \($url) (published from main) · Coverage: \($url)coverage/ · JMeter: \($url)jmeter/"' \
-            site/widgets/summary.json >> "$GITHUB_STEP_SUMMARY"
+            site/summary.json >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload report as artifact
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: allure-report
           path: site
+
+      # Posts the results as a comment on the pull request and updates it on every new push. No "View" link
+      # (remote-href): Pages only holds the main report; this PR's report is the allure-report artifact above.
+      - name: Comment results on pull request
+        if: github.event_name == 'pull_request'
+        uses: allure-framework/allure-action@a3ab9652beb040d940b562c00e999c7735f22906 # v0.11.2
+        with:
+          report-directory: site
 
       - name: Publish to GitHub Pages
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'

@@ -83,7 +83,7 @@ Assertions come from **AssertJ**, mocks from **Mockito**.
 | shared library | pipes | composite action (`.github/actions/start-sut`) or reusable workflow |
 | `matrix { }` | | `strategy.matrix` |
 | `options { disableConcurrentBuilds() }` | | `concurrency:` |
-| Allure Jenkins plugin (history kept by Jenkins) | | `allure generate` + `history/` from `gh-pages` + GitHub Pages |
+| Allure Jenkins plugin (history kept by Jenkins) | | `allure generate` (Allure 3) + `history.jsonl` from `gh-pages` + GitHub Pages |
 | Jenkins build page | | job summary (`$GITHUB_STEP_SUMMARY`) |
 | Jenkinsfile in repo | `bitbucket-pipelines.yml` | `.github/workflows/*.yml` |
 
@@ -99,6 +99,6 @@ Security habits on GitHub Actions (also in [ci.yml](../.github/workflows/ci.yml)
 | JUnit | `allure-jupiter` (+ AspectJ agent for `@Step`) | `app/target/allure-results` |
 | Postman | `newman-reporter-allure` (labels via `// @allure.label.x:"value"` comments in test scripts) | `postman/allure-results` |
 | JMeter | `sla-check.mjs` writes result JSON files directly | `jmeter/results/allure-results` |
-| CI | merges all three + `history/`, `executor.json`, `environment.properties`, `categories.json` | `report` job |
+| CI | merges all three + `history.jsonl`, `executor.json`, `environment.properties`; categories in `allurerc.mjs` | `report` job |
 
 Allure results are just JSON files (`*-result.json`). Any tool that can write such a file can show up in the report.

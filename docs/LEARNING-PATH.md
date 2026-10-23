@@ -12,7 +12,7 @@ Order: Module 0 first, then J, P, M in any order, G last (it ties everything tog
 ## Module 0: Orientation (30 min)
 
 1. Start the app ([README](../README.md#quick-start)), click through Swagger UI, then send a few requests with curl and look at the `book` table in psql or pgAdmin.
-2. Run `./mvnw clean verify` in `app/`, then `allure serve target/allure-results`. Find:
+2. Run `./mvnw clean verify` in `app/`, then `npx allure@3 open target/allure-results`. Find:
    the **Behaviors** tab (Epic → Feature → Story), the **Suites** tab (by class), one test with steps and an HTTP attachment.
 3. With the app running: `npm test` in `postman/`, and the non-GUI JMeter command in `jmeter/`.
 
@@ -162,7 +162,7 @@ Read it side by side with the [Jenkins/Bitbucket mapping](CHEATSHEET.md#jenkins-
 
 ### G1: First publish
 Follow [Publish on GitHub](../README.md#publish-on-github). Push a second commit.
-- **Done when:** the Pages report shows trend charts and the executor widget links to the run.
+- **Done when:** the Pages report shows trend charts (they need at least two runs).
 
 ### G2: Manual parameters
 Add a `p95` input to `workflow_dispatch` and pass it to `sla-check.mjs` (the `threads` input shows how).
@@ -185,9 +185,12 @@ Add `on: schedule` (cron) that runs only the perf job with a higher load.
 Protect `main`: require PRs and the checks "Build + JUnit" and "API tests (Postman/Newman)".
 - **Done when:** a PR with a failing test cannot be merged.
 
-### G6: Allure Report 3
-Generate the same results with Allure Report 3 (`npx allure generate`, config in `allurerc.mjs`) next to Allure 2.
-- **Done when:** you know what changed (UI, history handling, quality gates) and which one you would pick for a client.
+### G6: Allure quality gate
+Add a `qualityGate` to [allurerc.mjs](../.github/allure/allurerc.mjs), e.g. `{ rules: [{ maxFailures: 0 }] }`.
+The PR comment action then also creates an "Allure Quality Gate" check.
+- Pitfall: when the gate fails, `allure generate` fails the step, so the steps after it (artifact upload, PR comment)
+  are skipped. Decide which of them must still run.
+- **Done when:** a PR with a failing test shows a red quality gate check and the comment says which rule failed.
 
 ---
 

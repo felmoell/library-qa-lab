@@ -30,7 +30,7 @@ All three tools write **Allure results**, so CI merges them into **one** report.
 | JDK | 25 or newer (27 works) | already installed |
 | Node.js | 24 | already installed |
 | JMeter | 5.6.3 | `brew install jmeter` (brings its own JDK 21, see below) |
-| Allure CLI | 2.x | `brew install allure` |
+| Allure Report | 3.x | nothing to install, runs with `npx allure@3` (Node.js) |
 | Postman app | any | optional, for editing the collection |
 | PostgreSQL | 18 | already installed (`/Library/PostgreSQL/18`), the app's database |
 | Docker Desktop | any | already installed; must be **running** for `./mvnw verify` (Testcontainers) |
@@ -100,7 +100,7 @@ Errors are [RFC 9457 problem details](https://www.rfc-editor.org/rfc/rfc9457) (`
 ./mvnw test -Dgroups=smoke                 # only tests tagged @Tag("smoke")
 ./mvnw test -Dtest=IsbnValidatorTest       # one class (Jest: test.only / -t)
 ./mvnw verify -Dit.test=BookApiIT          # one integration test class
-allure serve target/allure-results         # open the Allure report
+npx allure@3 open target/allure-results     # generate and open the Allure report
 open target/site/jacoco/index.html         # coverage report (like Istanbul's lcov-report)
 ```
 
@@ -124,7 +124,7 @@ would show up as retries.
 ```bash
 npm ci
 npm test                 # = test:api (folders 00-02) + test:data (folder 03 with data/books.csv)
-allure serve allure-results
+npx allure@3 open allure-results
 ```
 
 In the Postman app: **Import** `library-api.postman_collection.json` and `env/local.postman_environment.json`,
@@ -153,10 +153,15 @@ with inputs for the JMeter load).
 | **Build + JUnit** | | `./mvnw verify` (tests + JaCoCo gate ≥ 80% lines, PostgreSQL via Testcontainers) | `app-jar`, `allure-results-junit`, `coverage-report` |
 | **API tests** | build | starts PostgreSQL (service container) and the jar ([start-sut](.github/actions/start-sut/action.yml)), runs Newman | `allure-results-postman` |
 | **Performance smoke** | build | starts PostgreSQL and the jar, runs JMeter, checks SLA gates | `allure-results-perf`, `jmeter-report` |
-| **Allure report** | all | merges all results, adds history + metadata, generates the report, publishes to `gh-pages` (only from `main`) | `allure-report` |
+| **Allure report** | all | merges all results, adds history + metadata, generates the report (Allure 3), comments on PRs, publishes to `gh-pages` (only from `main`) | `allure-report` |
 
 The report job also runs when tests failed (`if: !cancelled()`), because that's when you need the report most.
-Trend charts appear from the second run on: the previous report's `history/` folder is copied in before generating.
+Trend charts appear from the second run on: the previous report's `history.jsonl` is copied in before generating.
+Report name, history and failure categories are set in [allurerc.mjs](.github/allure/allurerc.mjs).
+
+On pull requests the job also posts the results as a comment ([allure-action](https://github.com/allure-framework/allure-action))
+and updates it on every push. Pages only ever shows `main`; a PR's full report is the `allure-report` artifact of its run:
+download, unzip, `npx allure@3 open allure-report`.
 
 ## Publish on GitHub
 
