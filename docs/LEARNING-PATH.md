@@ -11,7 +11,7 @@ Order: Module 0 first, then J, P, M in any order, G last (it ties everything tog
 
 ## Module 0: Orientation (30 min)
 
-1. Start the app ([README](../README.md#quick-start)), click through Swagger UI, then send a few requests with curl and the H2 console.
+1. Start the app ([README](../README.md#quick-start)), click through Swagger UI, then send a few requests with curl and look at the `book` table in psql or pgAdmin.
 2. Run `./mvnw clean verify` in `app/`, then `allure serve target/allure-results`. Find:
    the **Behaviors** tab (Epic → Feature → Story), the **Suites** tab (by class), one test with steps and an HTTP attachment.
 3. With the app running: `npm test` in `postman/`, and the non-GUI JMeter command in `jmeter/`.

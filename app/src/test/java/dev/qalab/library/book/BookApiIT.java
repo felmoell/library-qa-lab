@@ -1,6 +1,7 @@
 package dev.qalab.library.book;
 
 import dev.qalab.library.support.BookApiSteps;
+import dev.qalab.library.support.PostgresTestcontainer;
 import dev.qalab.library.support.TestIsbn;
 import io.qameta.allure.Epic;
 import io.qameta.allure.Feature;
@@ -19,6 +20,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.context.annotation.Import;
 
 import static io.restassured.RestAssured.given;
 import static io.restassured.module.jsv.JsonSchemaValidator.matchesJsonSchemaInClasspath;
@@ -29,13 +31,14 @@ import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasItems;
 
 /**
- * Level: integration / API test. The whole application starts on a random port (with the real database layer),
+ * Level: integration / API test. The whole application starts on a random port (with PostgreSQL in Docker),
  * RestAssured sends real HTTP requests. Runs in the Failsafe "integration-test" phase because the class ends in IT.
  * Playwright analogy: request.newContext({ baseURL }) + expect(response).
  */
 @Epic("Catalog")
 @Feature("Books API")
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
+@Import(PostgresTestcontainer.class)
 class BookApiIT {
 
 	@LocalServerPort

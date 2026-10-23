@@ -45,6 +45,7 @@ jobs:
           java-version: ${{ env.JAVA_VERSION }}
           cache: maven
 
+      # Repository and API tests start their own PostgreSQL via Testcontainers (Docker is preinstalled on the runner)
       - name: Build, unit + integration tests, coverage gate
         run: ./mvnw -B -ntp verify
 
@@ -76,6 +77,22 @@ jobs:
     name: API tests (Postman/Newman)
     needs: build
     runs-on: ubuntu-24.04
+    # The SUT needs a database. Same credentials as the defaults in application.yml, so nothing to configure.
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_DB: library
+          POSTGRES_USER: library
+          POSTGRES_PASSWORD: library
+        ports:
+          - 5432:5432
+        # Jobs only start once the service is healthy, so the SUT doesn't race the database
+        options: >-
+          --health-cmd "pg_isready -U library -d library"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -127,6 +144,20 @@ jobs:
     name: Performance smoke (JMeter)
     needs: build
     runs-on: ubuntu-24.04
+    services:
+      postgres: # same as in api-tests
+        image: postgres:18-alpine
+        env:
+          POSTGRES_DB: library
+          POSTGRES_USER: library
+          POSTGRES_PASSWORD: library
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U library -d library"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 

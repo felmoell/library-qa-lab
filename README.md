@@ -2,7 +2,7 @@
 
 A practice project for **JUnit, Postman/Newman, JMeter and GitHub Actions with Allure**.
 The system under test (SUT) is a small library REST API (Spring Boot). It starts with a books catalog
-and is built to grow: members, loans, auth, PostgreSQL, a web frontend (see [Roadmap](#roadmap)).
+and is built to grow: members, loans, auth, a web frontend (see [Roadmap](#roadmap)).
 
 ```
                        ┌──────────── GitHub Actions (ci.yml) ─────────────┐
@@ -32,6 +32,8 @@ All three tools write **Allure results**, so CI merges them into **one** report.
 | JMeter | 5.6.3 | `brew install jmeter` (brings its own JDK 21, see below) |
 | Allure CLI | 2.x | `brew install allure` |
 | Postman app | any | optional, for editing the collection |
+| PostgreSQL | 18 | already installed (`/Library/PostgreSQL/18`), the app's database |
+| Docker Desktop | any | already installed; must be **running** for `./mvnw verify` (Testcontainers) |
 
 Maven is not needed: the project uses the Maven Wrapper (`./mvnw`), which downloads Maven on first use.
 
@@ -42,6 +44,16 @@ Maven is not needed: the project uses the Maven Wrapper (`./mvnw`), which downlo
 
 ## Quick start
 
+One-time database setup (asks for the `postgres` password you chose when installing PostgreSQL):
+
+```bash
+/Library/PostgreSQL/18/bin/psql -h localhost -U postgres \
+  -c "CREATE ROLE library LOGIN PASSWORD 'library'" \
+  -c "CREATE DATABASE library OWNER library"
+```
+
+Then start the app:
+
 ```bash
 cd app
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=test-support
@@ -49,11 +61,12 @@ cd app
 
 - API: <http://localhost:8080/api/books>
 - Swagger UI: <http://localhost:8080/swagger-ui.html> (OpenAPI spec: `/v3/api-docs`, importable into Postman)
-- H2 console: <http://localhost:8080/h2-console> (JDBC URL `jdbc:h2:mem:library`, user `sa`, no password)
+- Database: `/Library/PostgreSQL/18/bin/psql -h localhost -U library library` (password `library`), or pgAdmin 4
 - Health: <http://localhost:8080/actuator/health>
 
-The database is in-memory and seeded with 21 books ([V2__seed_books.sql](app/src/main/resources/db/migration/V2__seed_books.sql)),
-so every restart starts from the same state. With the `test-support` profile, `POST /api/test/reset` restores it without a restart.
+On the first start, Flyway creates the schema and seeds 21 books ([V2__seed_books.sql](app/src/main/resources/db/migration/V2__seed_books.sql)).
+The data is persistent: it survives restarts, so whatever Postman or JMeter created is still there next time.
+With the `test-support` profile, `POST /api/test/reset` restores the seed state.
 
 ### The API (Phase 1)
 
@@ -91,6 +104,10 @@ allure serve target/allure-results         # open the Allure report
 open target/site/jacoco/index.html         # coverage report (like Istanbul's lcov-report)
 ```
 
+`BookRepositoryTest` and `BookApiIT` start their own throwaway PostgreSQL in Docker (Testcontainers, see
+[PostgresTestcontainer](app/src/test/java/dev/qalab/library/support/PostgresTestcontainer.java)), so Docker Desktop must
+be running. They never touch your local `library` database. The other tests need neither Docker nor a database.
+
 Use `clean` before re-running if you look at Allure: the results folder is not cleared automatically, so old runs
 would show up as retries.
 
@@ -99,7 +116,7 @@ would show up as retries.
 | [IsbnValidatorTest](app/src/test/java/dev/qalab/library/common/IsbnValidatorTest.java) | Unit | `@ParameterizedTest`, `@CsvSource`, `@Nested`, equivalence classes, boundary values |
 | [BookServiceTest](app/src/test/java/dev/qalab/library/book/BookServiceTest.java) | Unit with mocks | Mockito `@Mock`, `when/thenReturn`, `verify`, `ArgumentCaptor`, fixed `Clock`, `Allure.step` |
 | [BookControllerTest](app/src/test/java/dev/qalab/library/book/BookControllerTest.java) | Web slice | `@WebMvcTest`, MockMvc, `@MockitoBean`, HTTP contract and error JSON |
-| [BookRepositoryTest](app/src/test/java/dev/qalab/library/book/BookRepositoryTest.java) | Persistence slice | `@DataJpaTest` against the real Flyway migrations |
+| [BookRepositoryTest](app/src/test/java/dev/qalab/library/book/BookRepositoryTest.java) | Persistence slice | `@DataJpaTest` against the real Flyway migrations on PostgreSQL (Testcontainers, `@ServiceConnection`) |
 | [BookApiIT](app/src/test/java/dev/qalab/library/book/BookApiIT.java) | Integration/API | `@SpringBootTest(RANDOM_PORT)`, RestAssured, JSON schema, `@Step` methods, HTTP calls attached in Allure |
 
 ### Postman (in `postman/`, app must be running)
@@ -133,9 +150,9 @@ with inputs for the JMeter load).
 
 | Job | Needs | Does | Artifacts |
 |---|---|---|---|
-| **Build + JUnit** | | `./mvnw verify` (tests + JaCoCo gate ≥ 80% lines) | `app-jar`, `allure-results-junit`, `coverage-report` |
-| **API tests** | build | starts the jar ([start-sut](.github/actions/start-sut/action.yml)), runs Newman | `allure-results-postman` |
-| **Performance smoke** | build | starts the jar, runs JMeter, checks SLA gates | `allure-results-perf`, `jmeter-report` |
+| **Build + JUnit** | | `./mvnw verify` (tests + JaCoCo gate ≥ 80% lines, PostgreSQL via Testcontainers) | `app-jar`, `allure-results-junit`, `coverage-report` |
+| **API tests** | build | starts PostgreSQL (service container) and the jar ([start-sut](.github/actions/start-sut/action.yml)), runs Newman | `allure-results-postman` |
+| **Performance smoke** | build | starts PostgreSQL and the jar, runs JMeter, checks SLA gates | `allure-results-perf`, `jmeter-report` |
 | **Allure report** | all | merges all results, adds history + metadata, generates the report, publishes to `gh-pages` (only from `main`) | `allure-report` |
 
 The report job also runs when tests failed (`if: !cancelled()`), because that's when you need the report most.
@@ -183,5 +200,5 @@ These came up while building Phase 1 and are typical traps:
 | **1 (done)** | Books catalog | All basics, see above |
 | 2 | Members + loans: max 3 active loans, 21-day loan period, 1 extension, late fee €0.50/day capped at €10, no new loans with fees > €5 | BVA with `@MethodSource`, time-based tests with `Clock`, stateful Postman flows, JMeter transactions |
 | 3 | Spring Security + JWT | Postman auth (token fetch in collection pre-request), JMeter token correlation, `@WithMockUser` |
-| 4 | PostgreSQL + Testcontainers, Dockerfile, docker-compose | Testcontainers in JUnit, service containers in Actions |
+| 4 | PostgreSQL + Testcontainers (**done**), Dockerfile, docker-compose | Testcontainers in JUnit, service containers in Actions |
 | 5 | Small web frontend | Playwright E2E (your home turf), contract tests against OpenAPI, nightly load test |

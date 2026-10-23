@@ -1,5 +1,6 @@
 package dev.qalab.library.book;
 
+import dev.qalab.library.support.PostgresTestcontainer;
 import io.qameta.allure.Epic;
 import io.qameta.allure.Feature;
 import org.junit.jupiter.api.DisplayName;
@@ -7,6 +8,7 @@ import org.junit.jupiter.api.Test;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -16,12 +18,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * Level: persistence slice test. Starts JPA + Flyway against an in-memory H2, so the real migrations
- * and seed data (V2__seed_books.sql) are used. Each test runs in a transaction that is rolled back.
+ * Level: persistence slice test. Starts JPA + Flyway against a real PostgreSQL in Docker (Testcontainers), so the
+ * real migrations and seed data (V2__seed_books.sql) run on the same database as production. Each test runs in a
+ * transaction that is rolled back.
  */
 @Epic("Catalog")
 @Feature("Books persistence")
 @DataJpaTest
+@Import(PostgresTestcontainer.class)
 class BookRepositoryTest {
 
 	@Autowired
