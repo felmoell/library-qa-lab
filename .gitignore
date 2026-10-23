@@ -1,0 +1,18 @@
+# Build output and generated reports (CI regenerates them)
+app/target/
+postman/node_modules/
+postman/allure-results/
+jmeter/results/
+jmeter/report/
+allure-results/
+allure-report/
+
+# IDEs / OS
+.idea/
+*.iml
+.vscode/
+.DS_Store
+
+# Tool logs / crash dumps
+jmeter.log
+ajcore.*.txt

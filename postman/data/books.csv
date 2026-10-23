@@ -1,0 +1,11 @@
+case,isbn,title,author,publishedYear,copiesTotal,expectedStatus
+valid book,9781111111113,Data-Driven Testing,Ann Data,2020,2,201
+hyphenated ISBN is normalized,978-1-11-111111-3,Data-Driven Testing (hyphens),Ann Data,2020,2,201
+earliest allowed year 1450,9782222222224,Gutenberg Bible,Johannes Gutenberg,1450,1,201
+year 1449 is too early,9783333333335,Too Early,Ann Data,1449,1,400
+zero copies allowed,9794444444445,Out of Stock,Ann Data,2001,0,201
+negative copies,9785555555557,Negative Stock,Ann Data,2001,-1,400
+wrong ISBN checksum,9786666666669,Bad Checksum,Ann Data,2001,1,400
+ISBN-10 is not supported,3161484100,Old ISBN,Ann Data,2001,1,400
+empty title,9787777777779,,Ann Data,2001,1,400
+duplicate of seed data,9780132350884,Clean Code (copy),Robert C. Martin,2008,1,409

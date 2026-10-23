@@ -1,0 +1,791 @@
+{
+	"info": {
+		"_postman_id": "433d40e7-1276-5d3e-bec9-6334d6b797b1",
+		"name": "Library API",
+		"description": "API tests for the Library QA Lab SUT.\n\nRun headless: `cd postman && npm test`.\nVariables: `baseUrl` and `maxResponseTimeMs` come from the environment (env/*.json).",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "00 Smoke",
+			"description": "Is the API up at all? Run these first; if they fail, the rest is pointless.",
+			"item": [
+				{
+					"name": "Health check",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"// @allure.label.epic:Catalog",
+									"// @allure.label.feature:Smoke",
+									"// @allure.label.severity:blocker",
+									"pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+									"pm.test(\"application is UP\", () => pm.expect(pm.response.json().status).to.eql(\"UP\"));"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/actuator/health",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"actuator",
+								"health"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "List books",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"// @allure.label.epic:Catalog",
+									"// @allure.label.feature:Smoke",
+									"pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+									"const page = pm.response.json();",
+									"pm.test(\"response is a page of books\", () => {",
+									"    pm.expect(page).to.have.all.keys(\"content\", \"page\", \"size\", \"totalElements\", \"totalPages\");",
+									"    pm.expect(page.content).to.be.an(\"array\").that.is.not.empty;",
+									"});",
+									"pm.test(\"default page size is 20\", () => pm.expect(page.size).to.eql(20));"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/books",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"books"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "01 Books CRUD",
+			"description": "A chained flow: each request uses data from the previous one via collection variables (newIsbn, bookId). Run the folder in order.",
+			"item": [
+				{
+					"name": "Create book",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"// Generate a random but valid ISBN-13, so this request can be sent again and again",
+									"// without running into \"409 duplicate ISBN\".",
+									"const digits = [9, 7, 8];",
+									"for (let i = 0; i < 9; i++) digits.push(Math.floor(Math.random() * 10));",
+									"const sum = digits.reduce((acc, d, i) => acc + d * (i % 2 === 0 ? 1 : 3), 0);",
+									"digits.push((10 - (sum % 10)) % 10);",
+									"pm.collectionVariables.set(\"newIsbn\", digits.join(\"\"));"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"// @allure.label.epic:Catalog",
+									"// @allure.label.feature:\"Books API\"",
+									"// @allure.label.story:\"Book lifecycle\"",
+									"// @allure.label.severity:critical",
+									"",
+									"const bookSchema = {",
+									"    type: \"object\",",
+									"    required: [\"id\", \"isbn\", \"title\", \"author\", \"publishedYear\", \"copiesTotal\"],",
+									"    additionalProperties: false,",
+									"    properties: {",
+									"        id: { type: \"integer\", minimum: 1 },",
+									"        isbn: { type: \"string\", pattern: \"^97[89][0-9]{10}$\" },",
+									"        title: { type: \"string\", minLength: 1 },",
+									"        author: { type: \"string\", minLength: 1 },",
+									"        publishedYear: { type: \"integer\", minimum: 1450 },",
+									"        copiesTotal: { type: \"integer\", minimum: 0 }",
+									"    }",
+									"};",
+									"",
+									"pm.test(\"status is 201 Created\", () => pm.response.to.have.status(201));",
+									"pm.test(\"Location header points to the new book\", () => {",
+									"    pm.expect(pm.response.headers.get(\"Location\")).to.match(/\\/api\\/books\\/\\d+$/);",
+									"});",
+									"pm.test(\"body matches the Book JSON schema\", () => pm.response.to.have.jsonSchema(bookSchema));",
+									"pm.test(\"body echoes the request\", () => {",
+									"    const book = pm.response.json();",
+									"    pm.expect(book.isbn).to.eql(pm.collectionVariables.get(\"newIsbn\"));",
+									"    pm.expect(book.title).to.eql(\"Postman Testing\");",
+									"});",
+									"",
+									"// Hand the id to the next requests in this folder",
+									"pm.collectionVariables.set(\"bookId\", pm.response.json().id);"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/books",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"books"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"isbn\": \"{{newIsbn}}\",\n    \"title\": \"Postman Testing\",\n    \"author\": \"Felix Tester\",\n    \"publishedYear\": 2024,\n    \"copiesTotal\": 3\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get created book",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"// @allure.label.epic:Catalog",
+									"// @allure.label.feature:\"Books API\"",
+									"// @allure.label.story:\"Book lifecycle\"",
+									"pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+									"pm.test(\"it is the book we created\", () => {",
+									"    const book = pm.response.json();",
+									"    pm.expect(book.id).to.eql(Number(pm.collectionVariables.get(\"bookId\")));",
+									"    pm.expect(book.isbn).to.eql(pm.collectionVariables.get(\"newIsbn\"));",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/books/{{bookId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"books",
+								"{{bookId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update book",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"// @allure.label.epic:Catalog",
+									"// @allure.label.feature:\"Books API\"",
+									"// @allure.label.story:\"Book lifecycle\"",
+									"pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+									"pm.test(\"changes are returned\", () => {",
+									"    const book = pm.response.json();",
+									"    pm.expect(book.title).to.eql(\"Postman Testing, 2nd edition\");",
+									"    pm.expect(book.copiesTotal).to.eql(5);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/books/{{bookId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"books",
+								"{{bookId}}"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"isbn\": \"{{newIsbn}}\",\n    \"title\": \"Postman Testing, 2nd edition\",\n    \"author\": \"Felix Tester\",\n    \"publishedYear\": 2025,\n    \"copiesTotal\": 5\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete book",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"// @allure.label.epic:Catalog",
+									"// @allure.label.feature:\"Books API\"",
+									"// @allure.label.story:\"Book lifecycle\"",
+									"pm.test(\"status is 204 No Content\", () => pm.response.to.have.status(204));",
+									"pm.test(\"body is empty\", () => pm.expect(pm.response.text()).to.be.empty);"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/books/{{bookId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"books",
+								"{{bookId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get deleted book returns 404",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"// @allure.label.epic:Catalog",
+									"// @allure.label.feature:\"Books API\"",
+									"// @allure.label.story:\"Book lifecycle\"",
+									"pm.test(\"status is 404\", () => pm.response.to.have.status(404));",
+									"pm.test(\"error is RFC 9457 problem details\", () => {",
+									"    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/problem+json\");",
+									"    pm.expect(pm.response.json()).to.include({ status: 404, title: \"Not Found\" });",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/books/{{bookId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"books",
+								"{{bookId}}"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "02 Negative",
+			"description": "Error handling: every request here is expected to be rejected. Nothing is created.",
+			"item": [
+				{
+					"name": "Create with invalid fields",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"// @allure.label.epic:Catalog",
+									"// @allure.label.feature:\"Books API\"",
+									"// @allure.label.story:Validation",
+									"pm.test(\"status is 400\", () => pm.response.to.have.status(400));",
+									"pm.test(\"every invalid field is reported\", () => {",
+									"    const fields = pm.response.json().errors.map(e => e.field);",
+									"    pm.expect(fields).to.have.members([\"isbn\", \"title\", \"publishedYear\", \"copiesTotal\"]);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/books",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"books"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"isbn\": \"9783161484101\",\n    \"title\": \"\",\n    \"author\": \"Felix Tester\",\n    \"publishedYear\": 1449,\n    \"copiesTotal\": -1\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create with publication year in the future",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"// Boundary value: next year is the first invalid value. pm.variables = local, only for this request.",
+									"pm.variables.set(\"nextYear\", new Date().getFullYear() + 1);"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"// @allure.label.epic:Catalog",
+									"// @allure.label.feature:\"Books API\"",
+									"// @allure.label.story:Validation",
+									"pm.test(\"status is 400\", () => pm.response.to.have.status(400));",
+									"pm.test(\"publishedYear is rejected\", () => {",
+									"    const error = pm.response.json().errors[0];",
+									"    pm.expect(error.field).to.eql(\"publishedYear\");",
+									"    pm.expect(error.message).to.include(\"future\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/books",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"books"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"isbn\": \"9783161484100\",\n    \"title\": \"From the future\",\n    \"author\": \"Felix Tester\",\n    \"publishedYear\": {{nextYear}},\n    \"copiesTotal\": 1\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create with duplicate ISBN (hyphenated)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"// @allure.label.epic:Catalog",
+									"// @allure.label.feature:\"Books API\"",
+									"// @allure.label.story:\"Create book\"",
+									"pm.test(\"status is 409 Conflict\", () => pm.response.to.have.status(409));",
+									"pm.test(\"detail names the normalized ISBN\", () => {",
+									"    pm.expect(pm.response.json().detail).to.include(\"9780132350884\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/books",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"books"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"isbn\": \"978-0-13-235088-4\",\n    \"title\": \"Clean Code (copy)\",\n    \"author\": \"Robert C. Martin\",\n    \"publishedYear\": 2008,\n    \"copiesTotal\": 1\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"description": "9780132350884 is 'Clean Code' from the seed data (V2__seed_books.sql)."
+					},
+					"response": []
+				},
+				{
+					"name": "Create with malformed JSON",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"// @allure.label.epic:Catalog",
+									"// @allure.label.feature:\"Books API\"",
+									"// @allure.label.story:Validation",
+									"pm.test(\"status is 400\", () => pm.response.to.have.status(400));"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/books",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"books"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{ \"isbn\": ",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get unknown book",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"// @allure.label.epic:Catalog",
+									"// @allure.label.feature:\"Books API\"",
+									"// @allure.label.story:\"Get book\"",
+									"pm.test(\"status is 404\", () => pm.response.to.have.status(404));",
+									"pm.test(\"detail names the id\", () => pm.expect(pm.response.json().detail).to.include(\"999999\"));"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/books/999999",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"books",
+								"999999"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "List with page size above maximum",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"// @allure.label.epic:Catalog",
+									"// @allure.label.feature:\"Books API\"",
+									"// @allure.label.story:\"Search books\"",
+									"pm.test(\"status is 400\", () => pm.response.to.have.status(400));",
+									"pm.test(\"size is the invalid parameter\", () => pm.expect(pm.response.json().errors[0].field).to.eql(\"size\"));"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/books?size=101",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"books"
+							],
+							"query": [
+								{
+									"key": "size",
+									"value": "101"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "03 Data-driven",
+			"description": "Run ONLY this folder with a data file: newman ... --folder '03 Data-driven' -d data/books.csv (in the Postman app: Runner > Select file). Each CSV row is one iteration.",
+			"item": [
+				{
+					"name": "Create book from data row",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"// dataRow is ignored by the API. It only makes the URL unique per CSV row, so that Allure",
+									"// shows every row as its own test (same URL = same test id = shown as a retry).",
+									"pm.variables.set(\"dataRow\", pm.info.iteration + 1);"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"// @allure.label.epic:Catalog",
+									"// @allure.label.feature:\"Books API\"",
+									"// @allure.label.story:\"Validation (data-driven)\"",
+									"const testCase = pm.iterationData.get(\"case\");",
+									"const expected = Number(pm.iterationData.get(\"expectedStatus\"));",
+									"",
+									"pm.test(`${testCase}: status is ${expected}`, () => pm.response.to.have.status(expected));",
+									"",
+									"// Clean up right away, so the next run can create the same ISBN again.",
+									"// pm.sendRequest sends an extra request from a script; Newman waits for the callback.",
+									"if (pm.response.code === 201) {",
+									"    const id = pm.response.json().id;",
+									"    pm.sendRequest({ url: pm.variables.replaceIn(\"{{baseUrl}}/api/books/\") + id, method: \"DELETE\" }, (err, res) => {",
+									"        pm.test(\"cleanup: created book is deleted\", () => {",
+									"            pm.expect(err).to.be.null;",
+									"            pm.expect(res.code).to.eql(204);",
+									"        });",
+									"    });",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/books?dataRow={{dataRow}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"books"
+							],
+							"query": [
+								{
+									"key": "dataRow",
+									"value": "{{dataRow}}"
+								}
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"isbn\": \"{{isbn}}\",\n    \"title\": \"{{title}}\",\n    \"author\": \"{{author}}\",\n    \"publishedYear\": {{publishedYear}},\n    \"copiesTotal\": {{copiesTotal}}\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "99 Utilities",
+			"description": "Not part of the automated run. Needs the app started with the 'test-support' profile.",
+			"item": [
+				{
+					"name": "Reset database to seed data",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"status is 204\", () => pm.response.to.have.status(204));"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/test/reset",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"test",
+								"reset"
+							]
+						},
+						"description": "Drops all data and re-runs the Flyway migrations. Only available with --spring.profiles.active=test-support."
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Collection-level test: runs after EVERY request in the collection.",
+					"const limit = Number(pm.variables.get(\"maxResponseTimeMs\"));",
+					"pm.test(`response time is below ${limit} ms`, () => {",
+					"    pm.expect(pm.response.responseTime).to.be.below(limit);",
+					"});"
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "maxResponseTimeMs",
+			"value": "1000",
+			"type": "string",
+			"description": "Fallback; environments override it"
+		},
+		{
+			"key": "newIsbn",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "bookId",
+			"value": "",
+			"type": "string"
+		}
+	]
+}

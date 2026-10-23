@@ -1,0 +1,29 @@
+spring:
+  application:
+    name: library
+  datasource:
+    # In-memory H2 for Phase 1. Phase 4 swaps this for PostgreSQL via a profile; Flyway keeps the schema portable.
+    url: jdbc:h2:mem:library;DB_CLOSE_DELAY=-1
+    username: sa
+    password: ""
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate   # Flyway owns the schema, Hibernate only checks it
+  web:
+    # Always answer in English (validation messages would otherwise follow the JVM / Accept-Language locale).
+    locale: en
+    locale-resolver: fixed
+  h2:
+    console:
+      enabled: true        # http://localhost:8080/h2-console  (JDBC URL: jdbc:h2:mem:library)
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html

@@ -1,0 +1,14 @@
+<!--
+  AspectJ load-time weaving config for the tests (the weaver runs as -javaagent, see pom.xml).
+
+  Only classes named *Steps are woven: that is where @Step / @Attachment methods live (convention).
+  Weaving more is harmful, not just noisy: spring-aspects (pulled in by Spring Data JPA) registers
+  its own transaction aspect, which would otherwise be woven into production classes like BookService.
+-->
+<aspectj>
+    <weaver options="-Xlint:ignore">
+        <include within="dev.qalab..*Steps"/>
+        <!-- Allure's annotation-style aspects must be woven themselves (adds their aspectOf() method) -->
+        <include within="io.qameta.allure.aspects.*"/>
+    </weaver>
+</aspectj>

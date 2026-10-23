@@ -1,0 +1,314 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      threads:
+        description: JMeter reader threads
+        default: "5"
+      duration:
+        description: JMeter test duration (seconds)
+        default: "30"
+
+# A newer push to the same branch cancels the run that is still going
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# Least privilege: jobs only get what they need (the report job adds "contents: write")
+permissions:
+  contents: read
+
+env:
+  JAVA_VERSION: "25"
+  NODE_VERSION: "24"
+  JMETER_VERSION: "5.6.3"
+  JMETER_SHA512: 5978a1a35edb5a7d428e270564ff49d2b1b257a65e17a759d259a9283fc17093e522fe46f474a043864aea6910683486340706d745fcdf3db1505fd71e689083
+  ALLURE_VERSION: "2.46.1"
+
+jobs:
+  build:
+    name: Build + JUnit
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: maven
+
+      - name: Build, unit + integration tests, coverage gate
+        run: ./mvnw -B -ntp verify
+
+      - name: Upload app jar
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: app-jar
+          path: app/target/library.jar
+          retention-days: 3
+
+      # !cancelled() = also after failed tests, so failures end up in the report
+      - name: Upload Allure results (JUnit)
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: allure-results-junit
+          path: app/target/allure-results
+          if-no-files-found: ignore
+
+      - name: Upload coverage report (JaCoCo)
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: coverage-report
+          path: app/target/site/jacoco
+          if-no-files-found: ignore
+
+  api-tests:
+    name: API tests (Postman/Newman)
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: postman/package-lock.json
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: app-jar
+          path: app/target
+
+      - name: Start SUT
+        uses: ./.github/actions/start-sut
+        with:
+          jar: app/target/library.jar
+
+      - name: Run Postman collection
+        working-directory: postman
+        env:
+          POSTMAN_ENV: ci
+        run: |
+          npm ci
+          npm test
+
+      - name: Upload Allure results (Postman)
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: allure-results-postman
+          path: postman/allure-results
+          if-no-files-found: ignore
+
+      - name: Upload SUT log
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: sut-log-api-tests
+          path: ${{ env.SUT_LOG }}
+
+  perf-smoke:
+    name: Performance smoke (JMeter)
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # Two JDKs: the last one (25) is the default and runs the SUT. JMeter 5.6.3 ships a Groovy
+      # version that cannot run on newer JDKs, so JMeter itself uses JDK 21 (JAVA_HOME_21_X64).
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: |
+            21
+            ${{ env.JAVA_VERSION }}
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Cache JMeter
+        id: cache-jmeter
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/jmeter
+          key: jmeter-${{ env.JMETER_VERSION }}
+
+      - name: Install JMeter (verified by SHA-512)
+        if: steps.cache-jmeter.outputs.cache-hit != 'true'
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/jmeter.tgz" "https://dlcdn.apache.org/jmeter/binaries/apache-jmeter-${JMETER_VERSION}.tgz" \
+            || curl -fsSL -o "$RUNNER_TEMP/jmeter.tgz" "https://archive.apache.org/dist/jmeter/binaries/apache-jmeter-${JMETER_VERSION}.tgz"
+          echo "${JMETER_SHA512}  $RUNNER_TEMP/jmeter.tgz" | sha512sum -c -
+          mkdir -p ~/jmeter
+          tar -xzf "$RUNNER_TEMP/jmeter.tgz" -C ~/jmeter --strip-components=1
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: app-jar
+          path: app/target
+
+      - name: Start SUT
+        uses: ./.github/actions/start-sut
+        with:
+          jar: app/target/library.jar
+
+      - name: Run load test
+        working-directory: jmeter
+        env:
+          THREADS: ${{ inputs.threads || '5' }}
+          DURATION: ${{ inputs.duration || '30' }}
+        run: |
+          export JAVA_HOME="$JAVA_HOME_21_X64"
+          ~/jmeter/bin/jmeter -n -t library-load.jmx \
+            -l results/results.jtl -j results/jmeter.log -e -o report \
+            -Jthreads="$THREADS" -Jduration="$DURATION" -JmaxResponseMs=1000
+
+      - name: Check SLA gates
+        working-directory: jmeter
+        run: node scripts/sla-check.mjs --stats report/statistics.json --out results/allure-results --p95 500 --error-pct 1
+
+      - name: Upload Allure results (JMeter SLA)
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: allure-results-perf
+          path: jmeter/results/allure-results
+          if-no-files-found: ignore
+
+      - name: Upload JMeter dashboard
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: jmeter-report
+          path: |
+            jmeter/report
+            jmeter/results/jmeter.log
+          if-no-files-found: ignore
+
+  report:
+    name: Allure report
+    needs: [build, api-tests, perf-smoke]
+    # Also when tests failed (that is when the report matters most), but not when the run was cancelled
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write # push to the gh-pages branch
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Download all Allure results
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: allure-results-*
+          merge-multiple: true
+          path: allure-results
+
+      - name: Download coverage report
+        continue-on-error: true
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: coverage-report
+          path: extra/coverage
+
+      - name: Download JMeter dashboard
+        continue-on-error: true
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: jmeter-report
+          path: extra/jmeter
+
+      # Allure builds its trend charts from the history/ folder of the previous report
+      - name: Check out previous report (for history)
+        continue-on-error: true # the gh-pages branch does not exist before the first publish
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: gh-pages
+          path: previous-report
+
+      - name: Add history and report metadata
+        env:
+          REPO_URL: ${{ github.server_url }}/${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          RUN_NUMBER: ${{ github.run_number }}
+          BRANCH: ${{ github.head_ref || github.ref_name }}
+          SHA: ${{ github.sha }}
+        run: |
+          mkdir -p allure-results
+          if [ -d previous-report/history ]; then cp -r previous-report/history allure-results/; fi
+          cp .github/allure/categories.json allure-results/
+          PAGES_URL="https://${GITHUB_REPOSITORY_OWNER,,}.github.io/${GITHUB_REPOSITORY#*/}/"
+          echo "PAGES_URL=$PAGES_URL" >> "$GITHUB_ENV"
+          cat > allure-results/executor.json <<EOF
+          {
+            "name": "GitHub Actions",
+            "type": "github",
+            "url": "$REPO_URL",
+            "buildOrder": $RUN_NUMBER,
+            "buildName": "CI #$RUN_NUMBER ($BRANCH)",
+            "buildUrl": "$RUN_URL",
+            "reportUrl": "$PAGES_URL",
+            "reportName": "Library QA Lab"
+          }
+          EOF
+          cat > allure-results/environment.properties <<EOF
+          Branch=$BRANCH
+          Commit=$SHA
+          Java=${JAVA_VERSION} (Temurin)
+          Runner=ubuntu-24.04
+          EOF
+
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Generate Allure report
+        run: |
+          npx --yes "allure-commandline@${ALLURE_VERSION}" generate allure-results -o site --clean
+          if [ -d extra/coverage ]; then cp -r extra/coverage site/coverage; fi
+          if [ -d extra/jmeter/report ]; then cp -r extra/jmeter/report site/jmeter; fi
+
+      - name: Write job summary
+        run: |
+          jq -r --arg url "$PAGES_URL" '.statistic |
+            "### Allure report\n\n| Total | Passed | Failed | Broken | Skipped |\n|---|---|---|---|---|\n" +
+            "| \(.total) | \(.passed) | \(.failed) | \(.broken) | \(.skipped) |\n\n" +
+            "Report: \($url) (published from main) · Coverage: \($url)coverage/ · JMeter: \($url)jmeter/"' \
+            site/widgets/summary.json >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload report as artifact
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: allure-report
+          path: site
+
+      - name: Publish to GitHub Pages
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        uses: peaceiris/actions-gh-pages@84c30a85c19949d7eee79c4ff27748b70285e453 # v4.1.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: site
+          publish_branch: gh-pages
+          force_orphan: true # keep a single commit; the trend history lives inside the report
+          commit_message: "Allure report for ${{ github.sha }}"

@@ -1,0 +1,15 @@
+{
+  "name": "library-api-postman",
+  "private": true,
+  "description": "Postman collection for the Library API, run headless with Newman",
+  "scripts": {
+    "test": "npm run test:api && npm run test:data",
+    "test:api": "newman run library-api.postman_collection.json -e env/${POSTMAN_ENV:-local}.postman_environment.json --folder '00 Smoke' --folder '01 Books CRUD' --folder '02 Negative' -r cli,allure --reporter-allure-resultsDir allure-results",
+    "test:data": "newman run library-api.postman_collection.json -e env/${POSTMAN_ENV:-local}.postman_environment.json --folder '03 Data-driven' -d data/books.csv -r cli,allure --reporter-allure-resultsDir allure-results",
+    "clean": "rm -rf allure-results"
+  },
+  "devDependencies": {
+    "newman": "6.2.3",
+    "newman-reporter-allure": "3.14.0"
+  }
+}

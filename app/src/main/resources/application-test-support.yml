@@ -1,0 +1,4 @@
+# Profile "test-support": enables POST /api/test/reset (see TestSupportController).
+spring:
+  flyway:
+    clean-disabled: false

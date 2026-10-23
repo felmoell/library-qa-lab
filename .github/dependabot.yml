@@ -1,0 +1,15 @@
+# Keeps the pinned versions fresh: Dependabot opens a PR per update (also for the SHA-pinned actions).
+version: 2
+updates:
+  - package-ecosystem: maven
+    directory: /app
+    schedule:
+      interval: weekly
+  - package-ecosystem: npm
+    directory: /postman
+    schedule:
+      interval: weekly
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

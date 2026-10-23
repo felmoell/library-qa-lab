@@ -1,0 +1,15 @@
+[
+  {
+    "name": "SLA violations (JMeter)",
+    "matchedStatuses": ["failed"],
+    "messageRegex": ".*limit is.*"
+  },
+  {
+    "name": "Product defects (assertion failed)",
+    "matchedStatuses": ["failed"]
+  },
+  {
+    "name": "Test defects (test code crashed)",
+    "matchedStatuses": ["broken"]
+  }
+]

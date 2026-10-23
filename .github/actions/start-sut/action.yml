@@ -1,0 +1,42 @@
+name: Start SUT
+description: Starts the Library app jar in the background and waits until /actuator/health reports UP.
+
+inputs:
+  jar:
+    description: Path to the Spring Boot jar
+    required: true
+  port:
+    description: HTTP port of the app
+    default: "8080"
+  profiles:
+    description: Spring profiles to activate
+    default: test-support
+  timeout-seconds:
+    description: How long to wait for the health check
+    default: "90"
+
+runs:
+  using: composite
+  steps:
+    - name: Start app and wait until healthy
+      shell: bash
+      # Inputs go through env vars instead of ${{ }} inside the script (prevents script injection).
+      env:
+        JAR: ${{ inputs.jar }}
+        PORT: ${{ inputs.port }}
+        PROFILES: ${{ inputs.profiles }}
+        TIMEOUT: ${{ inputs.timeout-seconds }}
+      run: |
+        java -version 2>&1 | head -1
+        nohup java -jar "$JAR" --server.port="$PORT" --spring.profiles.active="$PROFILES" > "$RUNNER_TEMP/sut.log" 2>&1 &
+        echo "SUT_LOG=$RUNNER_TEMP/sut.log" >> "$GITHUB_ENV"
+        for i in $(seq 1 "$TIMEOUT"); do
+          if curl -fsS "http://localhost:$PORT/actuator/health" 2>/dev/null | grep -q '"status":"UP"'; then
+            echo "SUT is UP after ${i}s"
+            exit 0
+          fi
+          sleep 1
+        done
+        echo "::error::SUT did not report UP within ${TIMEOUT}s"
+        cat "$RUNNER_TEMP/sut.log"
+        exit 1
