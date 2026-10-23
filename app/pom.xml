@@ -20,7 +20,7 @@
 		<java.version>25</java.version>
 
 		<allure.version>3.0.0</allure.version>
-		<rest-assured.version>6.1.0</rest-assured.version>
+		<rest-assured.version>6.2.0</rest-assured.version>
 		<jacoco.version>0.8.15</jacoco.version>
 		<!-- Weaver for Allure's @Step. Spring Boot manages 1.9.25.1, which fails on JDK 26+
 		     ("no valid method to define auxiliary classes"); 1.9.26 works on JDK 25 and 27. -->
@@ -76,7 +76,7 @@
 		<dependency>
 			<groupId>org.springdoc</groupId>
 			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-			<version>3.1.0</version>
+			<version>3.1.1</version>
 		</dependency>
 
 		<!-- Database: PostgreSQL driver + Flyway's PostgreSQL support (a separate module since Flyway 10) -->
