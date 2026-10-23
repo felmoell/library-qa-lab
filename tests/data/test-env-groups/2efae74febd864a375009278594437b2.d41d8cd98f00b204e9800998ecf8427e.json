@@ -1,0 +1,1 @@
+{"id":"2efae74febd864a375009278594437b2.d41d8cd98f00b204e9800998ecf8427e","fullName":"dev.qalab.library.book.BookApiIT.duplicateIsbnInDifferentNotation","name":"the same ISBN with and without hyphens counts as a duplicate","status":"passed","testResultsByEnv":{"default":"04a5b46513e47b9b2c7fa1afbbe4333a"}}

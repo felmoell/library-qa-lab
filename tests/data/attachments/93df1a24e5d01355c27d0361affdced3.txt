@@ -1,0 +1,7 @@
+{
+    "isbn": "9787777777779",
+    "title": "",
+    "author": "Ann Data",
+    "publishedYear": 2001,
+    "copiesTotal": 1
+}

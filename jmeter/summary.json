@@ -1,0 +1,1 @@
+{"name":"Load test (JMeter)","plugin":"JMeter","status":"passed","stats":{"total":417,"passed":417,"failed":0},"duration":29421,"pluginId":"jmeter","pullRequestHref":"","jobHref":"https://github.com/felmoell/library-qa-lab/actions/runs/40030098593","href":"jmeter/"}

@@ -1,0 +1,1 @@
+{"detail":"Validation failed","instance":"/api/books","status":400,"title":"Bad Request","errors":[{"field":"title","message":"must not be blank"},{"field":"publishedYear","message":"must be greater than or equal to 1450"},{"field":"copiesTotal","message":"must be greater than or equal to 0"},{"field":"isbn","message":"must be a valid ISBN-13"}]}

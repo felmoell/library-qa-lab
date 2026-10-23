@@ -1,0 +1,1 @@
+{"id":"3fd6991612fab0168ec18205bbbf4889.d41d8cd98f00b204e9800998ecf8427e","fullName":"dev.qalab.library.book.BookControllerTest.duplicateReturns409","name":"POST with a duplicate ISBN returns 409","status":"passed","testResultsByEnv":{"default":"5d9b70a1e6d483b054b1eef1680dcffa"}}

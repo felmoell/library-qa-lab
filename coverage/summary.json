@@ -1,0 +1,1 @@
+{"name":"Line coverage (min 80 %)","plugin":"JaCoCo","status":"passed","stats":{"total":134,"passed":122,"failed":12},"duration":37236,"createdAt":1792792544745,"pluginId":"coverage","pullRequestHref":"","jobHref":"https://github.com/felmoell/library-qa-lab/actions/runs/40030098593","href":"coverage/"}

@@ -1,0 +1,7 @@
+{
+    "isbn": "9781033962190",
+    "title": "Postman Testing",
+    "author": "Felix Tester",
+    "publishedYear": 2024,
+    "copiesTotal": 3
+}

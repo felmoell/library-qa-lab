@@ -1,0 +1,1 @@
+{"detail":"Failed to read request","instance":"/api/books","status":400,"title":"Bad Request"}

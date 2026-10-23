@@ -1,0 +1,1 @@
+{"id":"f37c2a3c0d9b0fc67078626459c98240.5569803b2173f92b626a858fbf85ab2e","fullName":"jmeter.sla.GET /api/books/{id}.error rate","name":"GET /api/books/{id}: error rate <= 1 %","status":"passed","testResultsByEnv":{"default":"47e761679e8117db73bf77dfe977a787"}}

@@ -1,0 +1,1 @@
+{"id":"4e1c819317343fd6a99d4df9a52bf819.06347248df9f6bff03cc93c25d37383b","fullName":"dev.qalab.library.common.IsbnValidatorTest$Rejects.invalidIsbn","name":"invalidIsbn(String, String) \"ISBN-10 (not supported)\": \"\"3161484100\"\"","status":"passed","testResultsByEnv":{"default":"a9095f7da38f28a9bc3f8611644cd9c0"}}

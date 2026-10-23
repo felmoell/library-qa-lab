@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>BookService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">library</a> &gt; <a href="index.source.html" class="el_package">dev.qalab.library.book</a> &gt; <span class="el_source">BookService.java</span></div><h1>BookService.java</h1><pre class="source lang-java linenums">package dev.qalab.library.book;
+
+import java.time.Clock;
+import java.time.Year;
+
+import dev.qalab.library.common.ConflictException;
+import dev.qalab.library.common.InvalidFieldException;
+import dev.qalab.library.common.IsbnValidator;
+import dev.qalab.library.common.NotFoundException;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+@Transactional
+public class BookService {
+
+	private final BookRepository repository;
+
+	private final Clock clock;
+
+<span class="fc" id="L24">	public BookService(BookRepository repository, Clock clock) {</span>
+<span class="fc" id="L25">		this.repository = repository;</span>
+<span class="fc" id="L26">		this.clock = clock;</span>
+<span class="fc" id="L27">	}</span>
+
+	@Transactional(readOnly = true)
+	public Page&lt;Book&gt; search(String title, String author, Pageable pageable) {
+<span class="fc" id="L31">		return repository.findByTitleContainingIgnoreCaseAndAuthorContainingIgnoreCase(nullToEmpty(title),</span>
+<span class="fc" id="L32">				nullToEmpty(author), pageable);</span>
+	}
+
+	@Transactional(readOnly = true)
+	public Book get(long id) {
+<span class="fc" id="L37">		return repository.findById(id).orElseThrow(() -&gt; new NotFoundException(&quot;Book&quot;, id));</span>
+	}
+
+	public Book create(BookRequest request) {
+<span class="fc" id="L41">		String isbn = IsbnValidator.normalize(request.isbn());</span>
+<span class="fc" id="L42">		checkPublishedYear(request.publishedYear());</span>
+<span class="fc bfc" id="L43" title="All 2 branches covered.">		if (repository.findByIsbn(isbn).isPresent()) {</span>
+<span class="fc" id="L44">			throw duplicateIsbn(isbn);</span>
+		}
+<span class="fc" id="L46">		return repository.save(new Book(isbn, request.title(), request.author(), request.publishedYear(),</span>
+<span class="fc" id="L47">				request.copiesTotal()));</span>
+	}
+
+	public Book update(long id, BookRequest request) {
+<span class="fc" id="L51">		Book book = get(id);</span>
+<span class="fc" id="L52">		String isbn = IsbnValidator.normalize(request.isbn());</span>
+<span class="fc" id="L53">		checkPublishedYear(request.publishedYear());</span>
+<span class="fc bfc" id="L54" title="All 2 branches covered.">		repository.findByIsbn(isbn).filter(other -&gt; !other.getId().equals(book.getId())).ifPresent(other -&gt; {</span>
+<span class="fc" id="L55">			throw duplicateIsbn(isbn);</span>
+		});
+<span class="fc" id="L57">		book.update(isbn, request.title(), request.author(), request.publishedYear(), request.copiesTotal());</span>
+<span class="fc" id="L58">		return repository.save(book);</span>
+	}
+
+	public void delete(long id) {
+<span class="fc bfc" id="L62" title="All 2 branches covered.">		if (!repository.existsById(id)) {</span>
+<span class="fc" id="L63">			throw new NotFoundException(&quot;Book&quot;, id);</span>
+		}
+<span class="fc" id="L65">		repository.deleteById(id);</span>
+<span class="fc" id="L66">	}</span>
+
+	private void checkPublishedYear(int publishedYear) {
+<span class="fc" id="L69">		int currentYear = Year.now(clock).getValue();</span>
+<span class="fc bfc" id="L70" title="All 2 branches covered.">		if (publishedYear &gt; currentYear) {</span>
+<span class="fc" id="L71">			throw new InvalidFieldException(&quot;publishedYear&quot;, &quot;must not be in the future (max &quot; + currentYear + &quot;)&quot;);</span>
+		}
+<span class="fc" id="L73">	}</span>
+
+	private static ConflictException duplicateIsbn(String isbn) {
+<span class="fc" id="L76">		return new ConflictException(&quot;A book with ISBN &quot; + isbn + &quot; already exists&quot;);</span>
+	}
+
+	private static String nullToEmpty(String value) {
+<span class="fc bfc" id="L80" title="All 2 branches covered.">		return value == null ? &quot;&quot; : value.strip();</span>
+	}
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

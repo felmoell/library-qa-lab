@@ -1,0 +1,1 @@
+{"id":"66742ab37c70529007464fb0b055163f.d41d8cd98f00b204e9800998ecf8427e","fullName":"dev.qalab.library.common.IsbnValidatorTest$Accepts.nullIsLeftToNotBlank","name":"null as 'not my job' (@NotBlank handles missing values)","status":"passed","testResultsByEnv":{"default":"0ddc8bc5cca500f437ed0ec54fc10fc0"}}

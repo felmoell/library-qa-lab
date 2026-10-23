@@ -1,0 +1,1 @@
+{"id":"4e1c819317343fd6a99d4df9a52bf819.0cdc049c74b4283813052c0c09fe778d","fullName":"dev.qalab.library.common.IsbnValidatorTest$Rejects.invalidIsbn","name":"invalidIsbn(String, String) \"14 digits (upper length boundary + 1)\": \"\"97831614841000\"\"","status":"passed","testResultsByEnv":{"default":"35fc22923441b467bb13ceec583756bd"}}

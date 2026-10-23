@@ -1,0 +1,7 @@
+{
+    "isbn": "9783161484100",
+    "title": "From the future",
+    "author": "Felix Tester",
+    "publishedYear": 2027,
+    "copiesTotal": 1
+}

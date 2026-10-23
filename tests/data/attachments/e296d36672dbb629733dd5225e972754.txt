@@ -1,0 +1,7 @@
+{
+    "isbn": "9786666666669",
+    "title": "Bad Checksum",
+    "author": "Ann Data",
+    "publishedYear": 2001,
+    "copiesTotal": 1
+}

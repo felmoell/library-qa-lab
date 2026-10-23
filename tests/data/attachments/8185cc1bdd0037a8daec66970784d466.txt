@@ -1,0 +1,5 @@
+// Collection-level test: runs after EVERY request in the collection.
+const limit = Number(pm.variables.get("maxResponseTimeMs"));
+pm.test(`response time is below ${limit} ms`, () => {
+    pm.expect(pm.response.responseTime).to.be.below(limit);
+});

@@ -1,0 +1,1 @@
+{"id":"ad180a25397d180d4a24be89ddd246ca.d41d8cd98f00b204e9800998ecf8427e","fullName":"dev.qalab.library.book.BookRepositoryTest.uniqueIsbnConstraint","name":"the database rejects a duplicate ISBN (unique constraint)","status":"passed","testResultsByEnv":{"default":"2453116e57d1737b851fae5ab17a9661"}}

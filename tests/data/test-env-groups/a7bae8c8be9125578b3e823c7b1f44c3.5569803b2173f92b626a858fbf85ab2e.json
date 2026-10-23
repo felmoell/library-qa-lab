@@ -1,0 +1,1 @@
+{"id":"a7bae8c8be9125578b3e823c7b1f44c3.5569803b2173f92b626a858fbf85ab2e","fullName":"jmeter.sla.DELETE /api/books/{id}.error rate","name":"DELETE /api/books/{id}: error rate <= 1 %","status":"passed","testResultsByEnv":{"default":"c6b58a0fe7833ca6d2532c6e54b3755d"}}

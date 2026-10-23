@@ -1,0 +1,1 @@
+{"detail":"A book with ISBN 9780132350884 already exists","instance":"/api/books","status":409,"title":"Conflict"}

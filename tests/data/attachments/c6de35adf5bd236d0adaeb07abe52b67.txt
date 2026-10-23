@@ -1,0 +1,7 @@
+{
+    "isbn": "9785555555557",
+    "title": "Negative Stock",
+    "author": "Ann Data",
+    "publishedYear": 2001,
+    "copiesTotal": -1
+}

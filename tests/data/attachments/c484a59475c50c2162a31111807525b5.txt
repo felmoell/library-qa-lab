@@ -1,0 +1,1 @@
+{"detail":"Validation failed","instance":"/api/books","status":400,"title":"Bad Request","errors":[{"field":"title","message":"must not be blank"}]}

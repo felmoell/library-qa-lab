@@ -1,0 +1,1 @@
+{"id":"9dd306aa10e946801ad0f7b50b55983f.d41d8cd98f00b204e9800998ecf8427e","fullName":"dev.qalab.library.book.BookControllerTest.createReturns201","name":"POST returns 201 with Location header and the created book","status":"passed","testResultsByEnv":{"default":"3dc90f116003ec3dfc1fde225b656281"}}

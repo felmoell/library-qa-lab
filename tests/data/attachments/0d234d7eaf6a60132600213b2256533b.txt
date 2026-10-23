@@ -1,0 +1,7 @@
+{
+    "isbn": "9783333333335",
+    "title": "Too Early",
+    "author": "Ann Data",
+    "publishedYear": 1449,
+    "copiesTotal": 1
+}

@@ -1,0 +1,1 @@
+{"detail":"Validation failed","instance":"/api/books","status":400,"title":"Bad Request","errors":[{"field":"isbn","message":"must be a valid ISBN-13"}]}

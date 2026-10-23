@@ -1,0 +1,7 @@
+{
+    "isbn": "9783161484101",
+    "title": "",
+    "author": "Felix Tester",
+    "publishedYear": 1449,
+    "copiesTotal": -1
+}

@@ -1,0 +1,1 @@
+{"id":"98a5939571a4cd724b76edf578190800.d41d8cd98f00b204e9800998ecf8427e","fullName":"dev.qalab.library.book.BookServiceTest$Update.rejectsIsbnOfOtherBook","name":"rejects taking over the ISBN of another book","status":"passed","testResultsByEnv":{"default":"4705230067d4dbfcbf29c6b4277eff77"}}

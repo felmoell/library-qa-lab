@@ -1,0 +1,7 @@
+{
+    "isbn": "978-0-13-235088-4",
+    "title": "Clean Code (copy)",
+    "author": "Robert C. Martin",
+    "publishedYear": 2008,
+    "copiesTotal": 1
+}

@@ -1,0 +1,1 @@
+{"id":"f9590c89ab2f7a13891a9e4e8616bed6.d41d8cd98f00b204e9800998ecf8427e","fullName":"dev.qalab.library.book.BookServiceTest$Create.rejectsDuplicateIsbn","name":"rejects a duplicate ISBN, written differently","status":"passed","testResultsByEnv":{"default":"077e93a87254b0bcf62fb5a6a8d4d1b3"}}

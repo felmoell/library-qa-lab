@@ -1,0 +1,1 @@
+{"detail":"Validation failed","instance":"/api/books","status":400,"title":"Bad Request","errors":[{"field":"publishedYear","message":"must not be in the future (max 2026)"}]}

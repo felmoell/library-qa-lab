@@ -1,0 +1,1 @@
+{"detail":"Book with id 22 not found","instance":"/api/books/22","status":404,"title":"Not Found"}

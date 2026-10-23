@@ -1,0 +1,1 @@
+{"id":"4ebad5985a50476d848fb21b3fbfedfd.8139c1d95f657dab622dbe5fea8c8297","fullName":"jmeter.sla.POST /api/books.p95 response time","name":"POST /api/books: p95 response time <= 500 ms","status":"passed","testResultsByEnv":{"default":"e9057cf0cb502110253b871978bf5fbf"}}

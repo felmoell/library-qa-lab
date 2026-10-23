@@ -1,0 +1,1 @@
+{"id":"8e9dee9f41b9e5b24decec6a8005ac07.7f57dcaf33a032e489993183dbf9e559","fullName":"dev.qalab.library.common.IsbnValidatorTest$Accepts.validIsbn","name":"validIsbn(String, String) \"separated by spaces\": \"\"978 3 16 148410 0\"\"","status":"passed","testResultsByEnv":{"default":"3dd404bd738f5ae21f89c7f7b59826a5"}}

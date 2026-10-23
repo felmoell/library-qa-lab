@@ -1,0 +1,1 @@
+{"id":"c11562d59fa4125de297c127c89b40ab.d41d8cd98f00b204e9800998ecf8427e","fullName":"dev.qalab.library.book.BookControllerTest.malformedJsonReturns400","name":"POST with malformed JSON returns 400","status":"passed","testResultsByEnv":{"default":"45f5a42a8852552dbc9697e544e886cb"}}

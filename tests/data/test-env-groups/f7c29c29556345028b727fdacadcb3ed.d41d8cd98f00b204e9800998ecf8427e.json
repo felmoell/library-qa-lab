@@ -1,0 +1,1 @@
+{"id":"f7c29c29556345028b727fdacadcb3ed.d41d8cd98f00b204e9800998ecf8427e","fullName":"dev.qalab.library.book.BookControllerTest.createWithInvalidFieldsReturns400","name":"POST with several invalid fields lists every field error","status":"passed","testResultsByEnv":{"default":"b343602953eea2c1b4fe100d996ba6b3"}}
