@@ -19,7 +19,7 @@
 		     so any newer JDK (e.g. 27 locally) produces the same Java 25 classes as CI. -->
 		<java.version>25</java.version>
 
-		<allure.version>3.0.0</allure.version>
+		<allure.version>3.0.1</allure.version>
 		<rest-assured.version>6.2.0</rest-assured.version>
 		<jacoco.version>0.8.15</jacoco.version>
 		<!-- Weaver for Allure's @Step. Spring Boot manages 1.9.25.1, which fails on JDK 26+
