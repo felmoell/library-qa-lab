@@ -21,7 +21,7 @@
 
 		<allure.version>3.0.0</allure.version>
 		<rest-assured.version>6.2.0</rest-assured.version>
-		<jacoco.version>0.8.15</jacoco.version>
+		<jacoco.version>0.8.16</jacoco.version>
 		<!-- Weaver for Allure's @Step. Spring Boot manages 1.9.25.1, which fails on JDK 26+
 		     ("no valid method to define auxiliary classes"); 1.9.26 works on JDK 25 and 27. -->
 		<aspectj.version>1.9.26</aspectj.version>
