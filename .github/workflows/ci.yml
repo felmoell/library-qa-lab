@@ -345,7 +345,7 @@ jobs:
       # Posts the test results as a comment on the pull request and updates it on every new push
       - name: Comment results on pull request
         if: github.event_name == 'pull_request'
-        uses: allure-framework/allure-action@a3ab9652beb040d940b562c00e999c7735f22906 # v0.11.2
+        uses: allure-framework/allure-action@4729c7af3b9b1bf9305d8ace73db4028822fe78b # v0.12.0
         with:
           report-directory: site
 
