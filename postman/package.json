@@ -10,6 +10,6 @@
   },
   "devDependencies": {
     "newman": "6.2.3",
-    "newman-reporter-allure": "3.14.0"
+    "newman-reporter-allure": "3.15.0"
   }
 }
